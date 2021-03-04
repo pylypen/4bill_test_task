@@ -1,0 +1,21 @@
+version: "3.1"
+services:
+    # Redis Service
+    redis:
+      image: redis:alpine
+      container_name: 4bill-redis
+
+    #Python Service
+    app:
+      build:
+        context: .
+        dockerfile: ./docker/python/Dockerfile
+      container_name: 4bill_python
+      ports:
+        - "5000:5000"
+      volumes:
+        - ./app:/app
+      command: >
+        sh -c "python wsgi.py"
+      depends_on:
+        - redis
