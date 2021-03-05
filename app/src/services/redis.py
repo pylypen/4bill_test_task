@@ -19,14 +19,22 @@ class RedisService:
             values.append(amount)
 
             # Calculate sum
-            sum_ = sum(map(int, values))
+            sum_amount = sum(map(self._sum, values))
 
             # Return error
-            if sum_ > int(config[key]):
+            if sum_amount > int(config[key]):
                 return (config[key], key)
 
         # All fine
         return False
+
+    @staticmethod
+    def _sum(value):
+        # Catching empty values
+        try:
+            return int(value)
+        except TypeError:
+            return 0
 
     def append_amount(self, amount, query_number, config):
         """

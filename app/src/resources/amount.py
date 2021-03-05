@@ -1,4 +1,6 @@
 import os
+import time
+
 from flask_restful import Resource
 from src.services.redis import RedisService
 import ast
@@ -6,6 +8,7 @@ import ast
 
 class Amount(Resource):
     _redis = RedisService()
+    _attempts = 3000
 
     def get(self, amount=None):
         """
@@ -25,24 +28,29 @@ class Amount(Resource):
                 "error": "Oops, something went wrong!"
             }, 500
 
-        # Checking sum
-        check_sum = self._redis.check_sum(amount, self._config)
-        if check_sum:
-            return {
-                "error": f"Amount limit exeeded ({check_sum[0]}/{check_sum[1]}sec)"
-            }, 503
+        # Trying add amount
+        for _ in range(self._attempts):
+            # Checking sum
+            check_sum = self._redis.check_sum(amount, self._config)
+            if check_sum:
+                return {
+                    "error": f"Amount limit exeeded ({check_sum[0]}/{check_sum[1]}sec)"
+                }, 503
 
-        # get query_number
-        query_number = self._redis.get_query_number()
+            # get query_number
+            query_number = self._redis.get_query_number()
 
-        # set new amount
-        if not self._redis.append_amount(amount, query_number, self._config):
-            return {
-                "error": "Oops, something went wrong while saving!"
-            }, 500
+            # set new amount
+            if self._redis.append_amount(amount, query_number, self._config):
+                # All fine
+                return {'result': 'OK'}, 201
 
-        # All fine
-        return {'result': 'OK'}, 201
+            time.sleep(0.1)
+
+        # It can be happen only after ~5 min of start adding amount
+        return {
+            "error": "Oops, something went wrong while saving!"
+        }, 500
 
     def _check_config(self):
         """
