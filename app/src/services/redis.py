@@ -18,8 +18,11 @@ class RedisService:
             values = self._redis.mget(keys)
             values.append(amount)
 
+            # Removing None by filter
+            values = list(filter(None, values))
+
             # Calculate sum
-            sum_amount = sum(map(self._sum, values))
+            sum_amount = sum(map(int, values))
 
             # Return error
             if sum_amount > int(config[key]):
@@ -27,14 +30,6 @@ class RedisService:
 
         # All fine
         return False
-
-    @staticmethod
-    def _sum(value):
-        # Catching empty values
-        try:
-            return int(value)
-        except TypeError:
-            return 0
 
     def append_amount(self, amount, query_number, config):
         """

@@ -1,5 +1,6 @@
 import os
 import time
+from random import uniform
 
 from flask_restful import Resource
 from src.services.redis import RedisService
@@ -45,9 +46,9 @@ class Amount(Resource):
                 # All fine
                 return {'result': 'OK'}, 201
 
-            time.sleep(0.1)
+            time.sleep(uniform(0.03, 0.05))
 
-        # It can be happen only after ~5 min of start adding amount
+        # It can be happen only after ~2 min of start adding amount
         return {
             "error": "Oops, something went wrong while saving!"
         }, 500
