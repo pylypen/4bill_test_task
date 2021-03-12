@@ -1,7 +1,6 @@
 import os
 import time
 from random import uniform
-
 from flask_restful import Resource
 from src.services.redis import RedisService
 import ast

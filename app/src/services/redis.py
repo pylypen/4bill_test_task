@@ -5,6 +5,21 @@ class RedisService:
     def __init__(self):
         self._redis = redis
 
+    def _get_key(self, key_name):
+        """
+        Get value by key
+        :param key_name: string.
+        :return: integer
+        """
+        # Check TTL for key
+        if self._redis.ttl(key_name) < 0:
+            self._redis.delete(key_name)
+            return 0
+
+        # Getting key
+        key = self._redis.get(key_name)
+        return int(key) if key is not None else 0
+
     def check_sum(self, amount, config):
         """
         Check sum
@@ -14,9 +29,7 @@ class RedisService:
         """
         for key in config:
             # Getting keys and values for sum
-            keys = self._redis.keys(f"sec_{key}:*")
-            values = self._redis.mget(keys)
-            values.append(amount)
+            values = [self._get_key(f"sec_{key}"), amount]
 
             # Removing None by filter
             values = list(filter(None, values))
@@ -40,23 +53,29 @@ class RedisService:
         :return: bool
         """
         pipe = self._redis.pipeline()
-        while True:
-            try:
-                # watching query_number
-                pipe.watch('query_number')
 
-                # starting transaction and appending amount
-                pipe.multi()
-                for key in config:
-                    new_value = f"sec_{key}:{query_number}"
-                    pipe.setex(new_value, key, amount)
+        try:
+            # watching query_number
+            pipe.watch('query_number')
 
-                pipe.execute()
-                return True
-            except:
-                # rollback if something went wrong
-                pipe.reset()
-                return False
+            # starting transaction and appending amount
+            pipe.multi()
+            for key in config:
+                key_name = f"sec_{key}"
+                
+                if self._get_key(key_name):
+                    # Increment if key exist
+                    pipe.incrby(key_name, amount)
+                else:
+                    # Set if key not exist
+                    pipe.setex(key_name, key, amount)
+
+            pipe.execute()
+            return True
+        except:
+            # rollback if something went wrong
+            pipe.reset()
+            return False
 
     def get_query_number(self):
         """
